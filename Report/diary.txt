@@ -1,0 +1,296 @@
+Development Diary
+
+Every Sunday, I attend a formal Computer Science session for two hours. As I am doing this subject externally, these sessions are really important for keeping on track with the course and getting guidance on how the project is going.
+
+Also note that this diary was compiled as the project progressed and was updated at random intervals.. Consequently, there may be occasional inconsistencies in tense, tone, or formatting, reflecting the project's status at various points in time.
+
+
+
+Week 1
+
+When the project was first announced, I found myself at a crossroads regarding the direction of my project. After discussing the brief with my teacher and classmates, we collectively decided to build a system designed to monitor a living potted plant, which would give us a real physical subject to collect meaningful data from over the course of the project to complete the basic requirements.
+
+We moved immediately into looking into the equipment we would need. I opted for a Raspberry Pi 4B as the central processing unit, paired with a capacitive soil moisture sensor and a BME280 temperature sensor. I specifically chose a capacitive sensor over a resistive one to avoid the corrosion issues common in long-term soil monitoring. I placed an order for the following:
+  - Raspberry Pi 4B
+  - Capacitive Soil Moisture Sensor V2.0.0
+  - BME280 3.3V Atmospheric Pressure/Temp Sensor
+  - Breadboard and an assortment of jumper wires
+  - MCP3008-I/P (Analogue-to-Digital Converter (ADC), necessary because the Raspberry Pi lacks native analogue input pins)
+
+While awaiting delivery, my teacher provided a retrospective on successful projects from previous years, emphasising the importance of clear documentation and the iterative design process.
+
+
+
+Week 2
+
+With the hardware in transit, I spent this week refining my project's focus. The embedded system component was settled, but I still needed to decide what the simulation model would actually model. The brief listed several possible disaster risk scenarios such as, wildfire, drought, pest outbreak, air quality, landslides, and flooding, and also suggested broader themes such as canopy cover modelling, biodiversity changes, and species population dynamics. I gave a few of these some serious thought before deciding which way to go. A drought cycle model was probably the most obvious fit for the soil moisture sensor, where I could track soil dryness over time and model the knock-on effects on tree health and carbon storage. A pest outbreak simulation was another option, using temperature and moisture readings as inputs to a population spread model representing insects moving through a forest grid. An air quality model was also feasible, where the atmospheric sensor data could drive a simulation of particulate dispersal across a grid under different wind conditions. All three were viable and would have satisfied the brief's requirements, but none of them felt particularly engaging to work on for twelve weeks.
+
+I finally decided to base my project on wildfires, after being inspired by the event of the Palisades Fire, which broke out in Los Angeles in January 2025 and became one of the most destructive fires in California's history. Watching that unfold in real time made the topic feel immediate and genuinely important rather than abstract. Beyond that, I have always had a strong interest in emergency services and the systems that support them, and the idea that a simulation tool could realistically assist a fire department in planning evacuations or modelling fire behaviour under different weather conditions made the project feel like it had a practical purpose beyond just fulfilling a brief. That combination of a real-world trigger and a personal interest in the subject made wildfires a clear choice.
+
+After reading the brief again I noticed that Advanced Requirement 2 encourages the use of open-source data, which meant I needed a real, publicly available dataset to work with. While I didn't know its exact application as of now, I felt it was better to secure the data now rather than risk a delay later. I began researching wildfire datasets and came across the Algerian Forest Fires dataset on Kaggle. The main reason I chose it was simply because it had a lot of good, usable data: 244 daily observations across two regions with multiple variables already calculated, including the Initial Spread Index and the Fire Weather Index, which are real indices used by fire services. Most of the other datasets I found were either too sparse, lacked the right variables, or required significant preprocessing before they would be usable. This one was clean enough to work with relatively quickly while still being substantive. I downloaded the CSV and saved it into my artefacts folder.
+
+
+
+Week 3
+
+Most of my equipment arrived this week, bar the Raspberry Pi 4B, though with a minor complication: the manufacturer shipped a BMP280 instead of the BME280. Upon checking the datasheets, I found that the BMP280 lacks humidity sensing but handles temperature and pressure identically. Since I planned to use a dedicated soil sensor and hadn't even considered humidity, I decided to proceed with the BMP280 to avoid shipping delays.
+
+I spent the session on hardware assembly and circuit testing. I soldered the header pins onto the BMP280, using a breadboard to hold the pins steady and applying the soldering iron to create clean joints. I then ran a continuity test using a multimeter, probing each pin to verify it had a solid electrical connection to the PCB and that there were no accidental solder bridges between adjacent pins. This confirmed that the BMP280 was correctly prepared before any wiring began. Once I was satisfied with my soldering, I placed wires on each row of the breadboard that had a BMP280 pin in it.
+
+For the wider circuit, I placed the MCP3008 across the centre notch of the breadboard. The chip acts as the translator that allows the Raspberry Pi to understand the analogue signals from the soil sensor, since the Pi has no native analogue input pins of its own. I daisy-chained male-to-female wires together so that the soil sensor could reach a plant while the rest of the system stayed on a desk.
+
+
+
+Week 4
+
+While the Pi was still in transit, I shifted focus entirely to building the computer-based simulation model. [AR1, disaster risk model development]
+
+Firstly, I designed a spread probability formula using a sigmoid function to simulate how environmental variables influence the likelihood of a fire jumping between cells. I used temperature and soil moisture as the primary inputs; the probability of spreading is calculated by factoring temperature against the inverse square of soil moisture. This ensures that as soil moisture decreases or temperature increases, the probability rises rapidly. I then applied a constant to increase the overall chance of spreading, using the following formula:
+0.15 * (1 / (1 + exp(-(temperature - 25) / 7))) * (1 - soil moisture)^2 * 2
+
+I then began building a basic agent-based model that infected adjacent cells using this formula, incorporating four states: EMPTY, TREE (healthy), BURNING (infected), and BURNT (recovered). I initialised a grid and set the centre cell to BURNING, displaying a line graph via matplotlib once the simulation had finished. The graph tracks three values at each time step: the count of healthy trees in green, active burning cells in orange, and fully burned cells in black, reading from three history lists that step() appends to on every call. This provides a clear picture of the fire's progression over time.
+
+The next iteration involved replacing the static line graph with a grid visualisation rendered as a colourmap. Each cell was assigned a colour based on its state: white for EMPTY, green for TREE, orange for BURNING, and black for BURNT. This made the spatial behaviour of the fire immediately readable in a way the line graph alone could not convey.
+
+Once the colourmap was established, I ran a test to verify the dimensions.
+
+Test ID: 1
+Description: Create a model with width=60, height=40 and check the grid dimensions.
+Expected Result: grid has 40 rows and 60 columns
+Actual Result: grid has 40 rows and 60 columns
+Pass/Fail: Pass
+
+I then introduced a step function so that, rather than computing the entire simulation at once, it advanced one time step at a time. Feeding this into matplotlib's animation system allowed the grid to update in real time, meaning the spread of the fire could be watched frame-by-frame. This made testing and debugging considerably easier, as I could observe the fire's behaviour directly rather than just inspecting the final result.
+
+Next, I built a Tkinter window and embedded the matplotlib canvas inside it. I also reintroduced the line graph, placing it beneath the grid. I split the interface into a left-hand control panel and a right-hand visualisation panel, a layout I maintained for the rest of the project.
+
+To test the logic behind tree placement, I then looked at the density values.
+
+Test ID: 2
+Description: Initialise a model with tree_density=0.0 and verify no tree cells are placed.
+Expected Result: No TREE cells present in grid
+Actual Result: No TREE cells present in grid
+Pass/Fail: Pass
+
+Test ID: 3
+Description: Initialise a model with tree_density=1.0 and verify every cell is a tree.
+Expected Result: Every cell equals TREE
+Actual Result: Every cell equals TREE
+Pass/Fail: Pass
+
+Test ID: 4
+Description: Check that initial_tree_count matches the actual count of TREE cells on the grid after initialisation.
+Expected Result: initial_tree_count == number of TREE cells in grid
+Actual Result: initial_tree_count == number of TREE cells in grid
+Pass/Fail: Pass
+
+The first meaningful addition to the left panel was a risk indicator label. This label monitors the proportion of trees that have burned and updates its colour and text automatically as the simulation runs. It begins green and reads RISK LEVEL: STABLE. When 10% of the initial tree count has burned it turns orange and displays RISK LEVEL: WARNING. At 40% loss it turns red and reads RISK LEVEL: CRITICAL, representing a point where in a real scenario an evacuation order would be issued. This directly addresses the adaptive system requirement, as the interface is responding automatically to changing conditions within the model. [AR3, adaptive feedback: automatic risk indicator]
+
+I then added three sliders to the left panel, above the risk label, which I moved to the bottom of the panel. The temperature slider sets the baseline ambient temperature in degrees Celsius, which feeds into the spread probability function and influences how aggressively fire ignites in neighbouring cells, with higher temperatures pushing the probability toward its upper limit. The soil moisture slider represents how wet the ground is on a scale from zero to one, and acts inversely on spread probability so that drier conditions produce faster and wider fire spread. The tree density slider controls the proportion of grid cells populated with trees when the environment is generated, meaning a high density creates a densely connected forest where fire travels freely, while a lower density introduces natural gaps that act as firebreaks and can slow or halt progression entirely. Replacing the hard-coded values with these sliders meant the user could now explore different environmental conditions interactively. [AR2, what-if scenario capability introduced]
+
+I then added a single START SIMULATION button, then shortly after split it into two separate buttons. The first, labelled INITIALISE, reads the current slider values and uses them to generate the grid of trees without starting any fire. The second, labelled RANDOM IGNITION, selects a random tree cell from the generated grid and sets it alight to begin the simulation. This separation was important because it allowed the user to inspect the generated forest layout before committing to an ignition, making the what-if scenarios easier to reason about. The INITIALISE button disables itself once pressed to prevent the grid being regenerated mid-simulation, and RANDOM IGNITION disables itself once a fire has been started. I also added the ability to click directly on any tree cell in the grid to ignite that specific cell instead, giving precise control over where the fire starts.
+
+With the ignition system in place I tested the fire state behaviour.
+
+Test ID: 5
+Description: Set a specific cell to BURNING manually and verify it registers correctly.
+Expected Result: Selected cell state equals BURNING
+Actual Result: Selected cell state equals BURNING
+Pass/Fail: Pass
+
+Test ID: 6
+Description: Place a single BURNING cell in an otherwise empty grid, run 10 steps, and check fire did not spread.
+Expected Result: No additional cells become BURNING or BURNED
+Actual Result: No additional cells became BURNING or BURNED
+Pass/Fail: Pass
+
+Test ID: 7
+Description: Run a full simulation and verify no BURNED cell ever transitions back to BURNING.
+Expected Result: BURNED cells remain BURNED for the entire run
+Actual Result: BURNED cells remained BURNED throughout
+Pass/Fail: Pass
+
+I added a live analytics panel to the left side, presented as a labelled frame with monospaced text. It displays temperature, soil moisture, the current spread probability, and the running counts of total, healthy, burning, and burned cells. This panel only becomes populated after INITIALISE is pressed, as there is nothing meaningful to display before the grid exists.
+
+To streamline user experience, I added a status banner at the top of the right-hand panel. This guides the user through the simulation workflow in a logical sequence. Upon launching the programme, the banner reads STEP 1: INITIALISE ENVIRONMENT, prompting the user to set their parameters. Once the environment is generated, it updates to STEP 2: CLICK A GRID CELL OR PRESS RANDOM TO IGNITE.
+
+During the active phase, the banner displays SIMULATION RUNNING, providing immediate feedback that the model is processing. I also implemented an automatic detection feature: as soon as the simulation identifies that no BURNING cells remain, it halts the animation and updates the status to SIMULATION FINISHED. This addition ensures the interface is not only reactive but also instructive, guiding the user through the process without the need for external documentation.
+
+I then added playback controls below the ignition buttons. A PAUSE and RESUME button toggles the animation on and off without losing any simulation state, and if the user pauses, the status banner updates accordingly. SLOWER and FASTER buttons adjust the animation frame interval between a minimum of ten milliseconds per frame and a maximum of five hundred milliseconds per frame.
+
+I added a STOP / RESET button below the playback controls. Pressing it stops any running animation, clears the grid, re-enables the INITIALISE button, and returns the status banner and risk label to their initial states, while keeping the current user inputs. This allows the user to start a completely fresh simulation without needing to restart the programme.
+
+I then added two emergency alert popup windows to fulfil the adaptive feedback requirement more explicitly. When the simulation crosses the Warning threshold, a popup informs the user that a wildfire has been reported in the vicinity and advises them to prepare an emergency kit, fuel their vehicle, and monitor local news. When the Critical threshold is crossed, a second popup issues an immediate evacuation order with specific instructions to leave the area and follow emergency personnel. These popups fire only once per threshold crossing rather than repeatedly on every frame, and the risk label at the bottom of the left panel updates to match. The system is automatically responding to changing conditions by triggering real-world style emergency communications. [AR3, adaptive feedback: emergency alert popups]
+
+At this point I also addressed the visual presentation of the interface, adjusting the colour scheme and layout dimensions so that the GUI looked intentional rather than like a default Tkinter window. This covered things like consistent padding, appropriately sized panels, and colour.
+
+The spread function still used the hard-coded get_p_base() formula, so I tested that it was returning sensible values before continuing.
+
+Test ID: 8
+Description: Call get_p_base() and verify the returned probability is between 0.0 and 1.0.
+Expected Result: 0.0 <= p <= 1.0
+Actual Result: 0.0 <= p <= 1.0
+Pass/Fail: Pass
+
+Test ID: 9
+Description: Call get_p_base() at high temperature and low temperature with moisture held constant, and check the higher temperature produces a higher probability.
+Expected Result: p at temp=30 > p at temp=5
+Actual Result: p at temp=30 > p at temp=5
+Pass/Fail: Pass
+
+Test ID: 10
+Description: Call get_p_base() at low moisture and high moisture with temperature held constant, and check drier conditions produce a higher probability.
+Expected Result: p at moisture=0.05 > p at moisture=0.95
+Actual Result: p at moisture=0.05 > p at moisture=0.95
+Pass/Fail: Pass
+
+To make the temperature behaviour more realistic I replaced the static temperature input with a diurnal cycle. Rather than holding temperature constant throughout the simulation, the model now uses a sine function tied to the internal simulation clock to vary temperature continuously across a 24-hour period. The user-set slider value becomes the daily mean, and the model adds or subtracts up to five degrees depending on the time of day, with the peak occurring at 12:00 and the minimum at 00:00. Each simulation step advances the internal clock by half an hour, so a full simulated day takes 48 steps. This means fire behaviour naturally intensifies during the hottest part of the afternoon and slows overnight as conditions cool, which mirrors real wildfire dynamics. A live temperature reading was inserted to the Live Analytics panel. A time and day counter was added to the top right of the interface showing the current simulated time and how many days have elapsed. Because the temperature is derived directly from this clock, the user can watch the displayed temperature in the analytics panel rise and fall in sync with the time counter as the simulation runs.
+
+After adding the diurnal cycle I tested it to confirm the sine function was peaking and troughing at the right times.
+
+Test ID: 11
+Description: Check that the diurnal temperature function peaks at 18:00.
+Expected Result: Temperature is highest at time_of_day=18
+Actual Result: Temperature was highest at time_of_day=12, not 18
+Pass/Fail: Fail
+Fix: Inspecting sin(2π(t−6)/24) more carefully, the formula peaks at t=12 not t=18 as I had assumed. Corrected the test to check for a peak at 12:00. Retest passed.
+
+Test ID: 12
+Description: Check that the diurnal temperature function troughs at 06:00.
+Expected Result: Temperature is lowest at time_of_day=6
+Actual Result: Temperature was lowest at time_of_day=0, not 6
+Pass/Fail: Fail
+Fix: Same cause as Test 11. The formula troughs at t=0, not t=6. Corrected the test to check for a trough at 00:00. Retest passed.
+
+I also noticed at this point that the step() function was not tracking history correctly, so I tested it.
+
+Test ID: 13
+Description: Run three steps and check that each history list has exactly three entries.
+Expected Result: len(history list) == 3
+Actual Result: History lists were shorter than expected, with entries missing for steps where no cells were burning
+Pass/Fail: Fail
+Fix: step() was only appending to the history when there were active BURNING cells. Fixed step() to always append regardless of fire state. Retest passed.
+
+Wind was the final major addition to the model this week. I added a wind speed slider ranging from zero to ten kilometres per hour and a custom compass widget that the user can click or drag to set wind direction in degrees, with an arrow indicating the current direction visually. Internally the direction is converted to a unit vector at each time step. When evaluating whether a burning cell spreads to each of its eight neighbours, the alignment between the spread direction and the wind vector is calculated using a dot product. Cells that are downwind receive a positive wind multiplier increasing their ignition probability, while cells directly upwind receive a reduced multiplier, with a minimum floor to prevent spread being completely blocked in any direction. At wind speeds above five kilometres per hour the model introduces long-range spotting, where a burning cell has a chance each step of projecting an ember ahead in the wind direction by a random distance of between three and nine cells, which can ignite trees well beyond the main fire front and bypass firebreaks. Above seven kilometres per hour a separate drifting ember system activates, generating particles that travel with the wind over multiple time steps before their lifetime expires, rendered as small star markers on the grid. The live analytics panel also converts the wind direction from degrees into a cardinal compass bearing such as N, NE, or SW, displaying it alongside the speed so it remains readable without the user needing to interpret an angle. Together these wind mechanics produce the elongated fire shapes and unpredictable spot fire behaviour characteristic of real wind-driven wildfires, and the addition of wind as a variable significantly strengthens the what-if scenario capability since changing speed and direction produces dramatically different outcomes from identical starting conditions.
+
+After adding wind I tested that the simulation clock was advancing correctly with each step.
+
+Test ID: 14
+Description: Run one step and check that time_of_day advances by exactly 0.5 hours.
+Expected Result: time_of_day increases by 0.5
+Actual Result: time_of_day increased by 0.5
+Pass/Fail: Pass
+
+Test ID: 15
+Description: Set time_of_day to 23.5, run one step, and check day_count increments and time_of_day resets to 0.0.
+Expected Result: day_count += 1 and time_of_day == 0.0
+Actual Result: day_count += 1 and time_of_day == 0.0
+Pass/Fail: Pass
+
+
+
+Week 5
+
+This week I restructured the left panel to address the what-if simulation requirement more directly. Rather than the user having to manually adjust every slider each time they wanted to test a specific scenario, I reorganised the controls around a tabbed notebook with three tabs. The two preset tabs were labelled ONE and TWO, with hard-coded placeholder values that were not yet grounded in any real data.
+
+The CUSTOM tab works exactly as the controls had before, with all sliders, the compass, and the algorithm buttons fully interactive. The ONE and TWO tabs are pre-loaded with the values from their respective scenario dictionaries defined at the top of the file, and all of their controls are disabled so the user cannot accidentally modify them. Selecting one of these tabs and pressing INITIALISE immediately sets up the environment for that specific scenario without any manual input required. This made the what-if demonstration much cleaner, as the two scenarios could be run and compared without the risk of accidentally using slightly different values each time. [AR2, two named what-if scenarios]
+
+I designed the two scenarios around distinct real-world risk profiles. ONE was set up as a drought scenario: high temperature, very low soil moisture, and low wind, representing the kind of prolonged dry conditions that leave vegetation highly combustible. TWO was designed to replicate the kind of conditions that drove the Palisades Fire in January 2025, the same event that had motivated the choice of wildfires as a topic back in Week 2. The Santa Ana winds that fuelled that fire are characterised by strong, dry offshore winds blowing from the interior toward the California coast, so TWO uses high wind speed, low soil moisture, and a fixed wind direction set to reflect the typical offshore bearing.
+
+At the top of each tab I added two buttons to select the spread algorithm: one for the closed-source function and one for the open-source function, both of which were placeholders at this stage. These toggle the active selection visually by changing colour, with the selected algorithm highlighted in blue and the inactive one in dark grey. On the preset tabs these buttons are also disabled, with ONE locked to closed source and TWO locked to open source, reflecting the reasoning I applied when designing those scenarios. [AR1, model uses both closed-source sensor data and open-source dataset]
+
+After getting the tab system working, I went back through the codebase and resolved several bugs that had accumulated during development. The get_current_mode() function was returning the wrong string for the preset tabs, meaning the scenario values were never being applied when those tabs were selected. The internal mode keys used throughout the code are ONE and TWO. I corrected the return values so that index zero maps to CUSTOM, index one to ONE, and index two to TWO. A related bug in setup_tab() was checking for the wrong mode strings in the conditional blocks that load scenario values into the sliders; fixing both to check for ONE and TWO consistently resolved the issue and the preset tabs began loading the correct values on initialisation.
+
+The preset tabs were also not correctly setting the wind speed slider or compass direction on initialisation, always defaulting to 2.0 kilometres per hour and zero degrees regardless of which scenario was loaded. I added logic to read the wind speed and wind direction from the relevant scenario dictionary during setup. The spread function type for preset tabs was similarly always defaulting to closed source because the spread function variable was never being set from the scenario dictionary at initialisation time; adding that assignment ensured the scenarios loaded with the correct algorithm as intended.
+
+In toggle_pause(), resuming the simulation was incorrectly setting self.ani to None, which meant the animation object was being lost and any subsequent call that tried to access it would either crash or silently fail. I removed that erroneous line so the animation object is preserved correctly across pause and resume cycles.
+
+I also noticed that the grid display was clipping half a cell off every edge. The cause was that imshow centres each cell on its integer coordinate, so a 60 by 40 grid actually spans from negative 0.5 to 59.5 horizontally and negative 0.5 to 39.5 vertically. The axis limits had been set to 0-60 and 0-40, cutting off the outermost half-cell on all four sides. I fixed this by passing an explicit extent to imshow and matching the axis limits with the correct 0.5 offsets in both refresh_display and draw_blank. I also added set_aspect equal to refresh_display, which had been missing and was causing slight distortion depending on window size.
+
+Finally I corrected the on_click handler so that clicking on the grid only ignites a cell if it actually contains a tree. Previously clicking on an empty cell or a burned cell would still call the ignite function and set that cell to burning regardless of its state. The fix was a single condition checking that the clicked cell equals TREE before proceeding, and I updated the bounds check at the same time to use the model's actual width and height rather than the hard-coded values of 60 and 40 that had been left from the original version. Once the fix was in I ran the test again.
+
+Test ID: 16
+Description: Simulate a click on a non-tree cell and check it does not become BURNING.
+Expected Result: Clicked cell remains EMPTY
+Actual Result: Cell was set to BURNING regardless of its state (first written in Week 4, failing since)
+Pass/Fail: Fail
+Fix: on_click had no cell-state check before igniting. Added a condition so the handler only proceeds if the clicked cell equals TREE. Retest passed.
+
+
+
+Week 6
+
+The Raspberry Pi arrived this week, so I shifted focus to the embedded system side of the project. I set up the Pi from scratch, installing the operating system and configuring SSH access so I could work on it remotely from my laptop without needing a dedicated monitor. Once the environment was ready I connected the BMP280 temperature sensor over I2C and the capacitive soil moisture sensor via the MCP3008 ADC over SPI, and verified that both were being detected correctly.
+
+With the Pi now running I calibrated the soil moisture sensor to establish the VAL_DRY and VAL_WET constants used in get_moisture_percent(). I held the sensor in open air and recorded the raw analogue value, which gave VAL_DRY = 54000. I then submerged the sensor in a glass of water and recorded the raw value at the other extreme, giving VAL_WET = 27500. These two readings define the endpoints of the percentage scale so that any raw value from the sensor can be mapped linearly between 0% and 100%, clamped at either end. This calibration step was essential for the collected Moisture_Percent readings to be meaningful rather than arbitrary. [BR1, analogue input calibrated and configured]
+
+I wrote an initial logging script that polled the BMP280 for temperature over I2C and read soil moisture from the MCP3008 ADC, combining both readings into a row written to plant_data.csv on the Pi's microSD card at /home/channers/garden_data/plant_data.csv. Each row recorded a timestamp alongside the temperature in degrees Celsius and the raw soil moisture reading.
+
+Before leaving the system to run unattended I ran two tests in the logging script to make sure everything was working correctly.
+
+Test ID: 17
+Description: Let the logging script run for several cycles and open plant_data.csv to verify rows are being appended correctly.
+Expected Result: Rows appear in plant_data.csv with correct Date, Time, Temp_C, Raw_Soil, and Moisture_Percent columns
+Actual Result: Rows were appended correctly with all expected columns
+Pass/Fail: Pass
+
+Test ID: 18
+Description: Water the plant and check that Moisture_Percent increases in the next logged row. [BR3, system tested with a changing environmental input: soil moisture]
+Expected Result: Moisture_Percent value rises noticeably after watering
+Actual Result: Moisture_Percent spiked sharply in the following reading, confirming sensor response
+Pass/Fail: Pass
+
+With both tests passed I left the system running to collect a full dataset over the following week. [BR2, environmental data being collected and stored]
+
+
+
+Week 7
+
+Early in the week the BMP280 sensor stopped producing readings after several hours of continuous operation. I spent some time attempting to diagnose the issue, checking the solder joints under magnification, re-seating the connections on the breadboard, and running I2C detection scans, but could not identify a clear cause. Rather than lose more time on a faulty component I replaced it with a BBC micro:bit, which has a built-in temperature sensor and is straightforward to interface with the Pi.
+
+Because the micro:bit communicates over USB serial rather than I2C, the Pi-side logging script had to be rewritten from scratch to match. I wrote a MicroPython programme on the micro:bit to read its onboard temperature() value and transmit it over USB serial every five seconds. On the Pi side I rewrote the logging script to replace the I2C BMP280 calls with a new get_microbit_temp() function, which opens the serial port at /dev/ttyACM0 with a baud rate of 115200, reads a line, strips any non-numeric characters, and applies a TEMP_OFFSET of -2.0°C to correct for the micro:bit's tendency to read slightly high. The get_moisture_percent() function was carried over from the original script and continued to convert the raw analogue value from the soil sensor into a percentage using calibration constants VAL_DRY and VAL_WET, clamping the result between 0 and 100. Both readings are combined into a single row written to plant_data.csv on the Pi's microSD card at /home/channers/garden_data/plant_data.csv, with columns Date, Time, Temp_C, Raw_Soil, and Moisture_Percent. The Pi's main loop calls both functions once and then sleeps for 3600 seconds, producing one logged reading per hour. [BR1, embedded system with digital input (micro:bit over USB serial), analogue input (soil sensor via MCP3008), and primary output (plant_data.csv written to microSD card)]
+
+With both sensors functioning again I left the system running continuously for a week, recording a new data point every hour. On the 7th I turned on a radiator in the room from 9am to 5pm to deliberately introduce a sustained temperature change. On the 9th I simply watered my plant, and looking back through the CSV afterwards, the Temp_C values rose steadily across that window and fell back once the radiator was off, and there was a sudden spike in soil moisture at the time I watered the plant, which confirmed the system was accurately tracking real changes in ambient temperature and soil moisture over time. [BR3, system tested with a changing environmental input: temperature and soil moisture] This produced a dataset of 134 readings covering temperature and soil moisture over a sustained period, which was what I needed to carry out a meaningful regression analysis. [BR2, environmental data fully collected and stored in plant_data.csv] While the data collection ran in the background I started work on the project report webpage, planning the structure and drafting the context and methodology sections. With the full embedded system now working end to end, I also took the opportunity to record a short video of it in operation, capturing the sensor readings being logged in real time, which I planned to include in the final submission video.
+
+
+
+Week 8
+
+With a full week of sensor data collected I turned my attention to analysing it. The dataset included the watering spike from the 9th of March where Moisture_Percent jumped to 93.5%, which was exactly the kind of real sensor response I had tested for in Week 6. Rather than removing it, I kept it in the dataset as a genuine data point, it represented a real change in soil conditions and removing it would have meant discarding valid evidence of the sensor working correctly. I started with the open-source dataset, as the analysis script for that was more straightforward to write first. The Algerian Forest Fires CSV had non-numeric header rows embedded partway through the file, so the cleaning step attempted to parse the first field of every row as an integer using int(row[0]) and skipped any row where that failed. Each row was also split on commas and stripped of surrounding whitespace individually rather than relying on a DictReader, which handled the inconsistent spacing in the raw file. The dataset contained daily weather readings and fire occurrence labels across two Algerian regions during summer 2012, including the Initial Spread Index and the Fire Weather Index for each day, both established indices used in real wildfire management.
+
+Using numpy.polyfit I fitted a linear regression of FWI against ISI directly from the data, obtaining FWI = 1.653 × ISI − 0.804 with an R-squared of 0.852. This was a strong fit, which made sense because FWI is mathematically derived partly from ISI within the Canadian Forest Fire Weather Index system. Colouring the scatter plot by fire and no-fire days made the separation clear: fire days clustered toward higher ISI and FWI values while no-fire days sat mostly at the lower end, with some overlap in the middle. That overlap was informative rather than problematic, since identical weather conditions do not always produce the same outcome in reality, which is precisely why a probabilistic model is more appropriate than a hard threshold.
+
+For the sigmoid that converts FWI into a spread probability, I took the midpoint between the mean FWI of the no-fire days (nofire_fwi) and the mean FWI of the fire days (fire_fwi), which gave a sig_centre of 6.35, and used half the standard deviation of all FWI values as the scale parameter, giving a sig_scale of 3.71. Centring the sigmoid at the point where the two historical populations overlap means the function assigns roughly 50% probability at the boundary between fire and no-fire conditions in the real data, which felt like the most defensible choice. The ISI value fed into the regression is itself calculated from wind speed and fuel dryness using standard FWI system formulae, with fuel dryness approximated from the simulation's soil moisture and temperature values. The constants derived from this script, slope, intercept, sig_centre, and sig_scale, are used directly in the open-source spread function in main.py, where stochastic noise is also applied to the final p_spread value, randomly varying it between 0.8 and 1.2 times the base value each call, to prevent the simulation from being perfectly deterministic and to reflect the natural variability present in the historical data.
+
+With the open-source analysis done I then ran the same process on my own plant_data.csv. I ran a linear regression between temperature and soil moisture percentage using numpy.polyfit. The regression produced slope and intercept values giving the equation Moisture_Percent = -0.2795 × Temp_C + 21.37, confirming a statistically significant negative correlation between temperature and moisture. The direction made physical sense: as temperature rises, the soil dries out faster. The R-squared of 0.177 initially concerned me, but on reflection it was reasonable given the setup. The sensor was indoors in a stable environment and the temperature barely moved across the week, mostly sitting between 8 and 11 degrees Celsius. When the input variable has that narrow a range, sensor noise will always dominate the variation, so a modest R-squared is expected rather than a sign that something went wrong. The p-value coming in well below 0.001 confirmed that the negative trend was statistically genuine.
+
+The regression became the mathematical backbone of the closed-source spread function. Inside the function, the current simulation temperature is passed into the regression equation to predict what moisture level would be expected at that temperature. That predicted value is then blended 50/50 with the user's soil moisture slider, so the real-world data anchors the baseline while the slider remains meaningful for what-if exploration. A dryness effect is then calculated as (1 − pred_moisture)², which amplifies the impact of dry conditions nonlinearly. The temperature effect uses a sigmoid centred on mean_T (9.92°C, the mean of Temp_C from the dataset) with a scale derived from std_T (2.05, its standard deviation), meaning the sigmoid transition is grounded in the actual range of conditions the sensor recorded rather than being an arbitrary choice. The final p_spread is the product of temp_effect and dryness multiplied by a base rate of 0.30.
+
+
+
+Week 9
+
+With both analyses complete I replaced the placeholder spread functions in the main simulation with the two data-grounded versions. The closed-source function is tied to the ONE scenario tab and uses the plant sensor regression as described above. The open-source function is tied to the TWO tab, and now uses the fitted FWI formula and sigmoid parameters derived directly from the Algerian dataset rather than the invented constants that had been there previously. Both functions can be selected in the CUSTOM tab. Every numerical constant in both functions could now be traced back to a real source, which was a meaningful improvement over the earlier version. With the functions properly grounded I also renamed the two preset tabs to reflect what they actually represented: ONE became DROUGHT and TWO became HIGH WINDS. [AR1, computer model now uses data collected from the embedded system combined with open-source data]
+
+
+
+Weeks 10 to 14
+
+Before putting the artefact folder away, I re-ran all previous tests in main.py to make sure nothing had broken during the final round of changes.
+
+Test ID: 19
+Description: Re-run all previous tests against the final submitted version of main.py.
+Expected Result: All 18 tests pass
+Actual Result: All 18 tests passed
+Pass/Fail: Pass
+
+I reviewed the full codebase, added inline comments throughout, and ensured that both analysis scripts and the main simulation file were structured clearly enough to follow without additional explanation.
+
+With the core simulation complete and both spread functions grounded in real data, I spent the rest of the weeks building the report webpage and completing the written documentation.
+
+I approached the webpage knowing I had some existing experience with web development, so I built it from scratch in HTML and CSS rather than using a template. The page has a fixed sidebar navigation with an IntersectionObserver script that highlights the active section as the user scrolls, and the main content is structured into seven sections following the brief's own headings. For the project flowchart I used pure CSS rather than producing a static image, building it from styled div elements with connecting lines so it rendered crisply at any screen size and was easier to iterate on than exporting a diagram repeatedly.
+
+To make sure the webpage covered everything it needed to, I asked my Computer Science teacher at my actual school for the marking checklist they give students, which lists every element the examiner looks for in the report. I went through this alongside the mark allocation breakdown in the brief itself, which made clear that sections like the evaluation and the data analysis methodology carried significant weight. I used both documents to guide what I wrote and how much depth to go into, making sure nothing was missing before I considered the page finished.
+
+Once I was satisfied with the webpage I recorded the submission video. I used OBS to first record a voiceover for a pre-recorded video showcasing the embedded system, then brought up plant_data.csv and identified where I changed the environment. After that I opened main.py and ran it, pointing out every feature of the dashboard, then recorded a short summary. I then compiled all of my footage in Kdenlive and edited it. The total footage came out to around 07:45, which I managed to trim down by removing certain parts, including my summary, to 05:56. I then multiplied the speed of the video by 1.88 in order to get exactly 5 minutes.
+
