@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[REDACTED] Report Webpage</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="exam-tag">Exam No. [REDACTED]</div>
+        <div class="sidebar-title">LC Computer Science<br>Coursework 2026</div>
+    </div>
+    <nav>
+        <div class="nav-section-label">Sections</div>
+        <a href="#section1" class="bar-item"><span class="nav-num">01</span> Meeting The Brief</a>
+        <a href="#section2" class="bar-item"><span class="nav-num">02</span> Investigation</a>
+        <a href="#section3" class="bar-item"><span class="nav-num">03</span> Plan and Design</a>
+        <a href="#section4" class="bar-item"><span class="nav-num">04</span> Create</a>
+        <a href="#section5" class="bar-item"><span class="nav-num">05</span> Evaluation</a>
+        <a href="#section6" class="bar-item"><span class="nav-num">06</span> References</a>
+        <a href="#section7" class="bar-item"><span class="nav-num">07</span> Word Count</a>
+    </nav>
+</aside>
+
+<div class="main-content">
+
+    <div class="hero">
+        <h1><span>Wildfire Risk Simulation System</span></h1>
+        <p class="hero-sub">An agent-based wildfire spread model driven by real embedded sensor data and open-source fire weather indices, with adaptive emergency alert feedback.</p>
+        <br>
+        <div class="diary-note">
+            <p><strong>Note:</strong> All sections of this report are summaries drawn from <code>diary.txt</code>, which is included in the Report folder and contains the full week-by-week development diary for this project.</p>
+        </div>
+    </div>
+
+    <section id="section1">
+        <div class="section-header">
+            <span class="section-num">01</span>
+            <h3>Meeting The Brief</h3>
+        </div>
+
+        <div class="fig">
+            <video id="videoPlayer" controls>
+                    <source src="assets/meeting_the_brief.mp4" type="video/mp4">
+                    Hmmm cannot see video
+            </video>
+            <div class="fig-caption"><strong>Fig. 1</strong> - Video demonstrating how the project meets the brief.</div>
+        </div>
+
+        <p>The artefact is made up of two linked components: a Raspberry Pi based embedded system that records soil moisture and ambient temperature from a potted plant, and a Python wildfire simulation model whose spread functions are driven by that sensor data combined with a publicly available fire weather dataset. Together they address every basic and advanced requirement on the brief.</p>
+
+        <div class="req-grid">
+            <div class="req-card basic">
+                <div class="req-label basic">[BR1] Embedded System</div>
+                <p>Raspberry Pi 4B with a capacitive soil moisture sensor (analogue, via MCP3008) and a BBC micro:bit V2 temperature sensor (digital, over USB).<br>Primary output is <code>plant_data.csv</code> written hourly to the Pi's microSD card.</p>
+            </div>
+            <div class="req-card advanced">
+                <div class="req-label advanced">[AR1] Disaster Risk Model</div>
+                <p>Agent-based wildfire spread model in Python. Two spread functions: a closed-source function from a regression of the plant sensor data, and an open-source function using FWI regression and sigmoid parameters derived from the Algerian Forest Fires dataset.</p>
+            </div>
+            <div class="req-card basic">
+                <div class="req-label basic">[BR2] Data Collection</div>
+                <p>Approximately 134 hourly readings of <code>Temp_C</code>, <code>Raw_Soil</code>, and <code>Moisture_Percent</code> collected over five continuous days, stored in <code>plant_data.csv</code>.</p>
+            </div>
+            <div class="req-card advanced">
+                <div class="req-label advanced">[AR2] What-If Simulations</div>
+                <p><strong>DROUGHT</strong> - elevated temperature, low moisture, light wind, closed-source spread.<br><strong>HIGH WINDS</strong> - Santa Ana-style conditions replicating the January 2025 Palisades Fire environment; high wind speed, low moisture, fixed offshore bearing; open-source spread function.</p>
+            </div>
+            <div class="req-card basic">
+                <div class="req-label basic">[BR3] Process Simulation</div>
+                <p>System tested with two changing inputs: running a radiator produced a sustained rise then fall in <code>Temp_C</code> across an eight-hour window; watering the plant caused a sharp spike in <code>Moisture_Percent</code></p>
+            </div>
+            <div class="req-card advanced">
+                <div class="req-label advanced">[AR3] Adaptive System</div>
+                <p>Risk label updates automatically as fire spreads. At 10% tree loss a <span class="ui-risk ui-risk-warning">RISK LEVEL: WARNING</span> popup advises emergency preparation; at 40% loss a <span class="ui-risk ui-risk-critical">RISK LEVEL: CRITICAL</span> popup issues an evacuation order. Both fire once per threshold crossing and the risk label colour updates to match.</p>
+            </div>
+        </div>
+
+    </section>
+
+    <section id="section2">
+        <div class="section-header">
+            <span class="section-num">02</span>
+            <h3>Investigation</h3>
+        </div>
+
+        <p>Before settling on a design direction I researched several categories of existing solution. Operational wildfire tools such as the US Forest Service's FARSITE system [2] and Canada's Canadian Forest Fire Weather Index (FWI) system [3] both use grid-based spread models driven by wind, slope, and fuel-moisture inputs - the same variables used in my own simulation. These confirmed that probabilistic, cell-by-cell spread is a widely used and defensible modelling approach.</p>
+
+        <div class="fig">
+            <img src="assets/farsite.png" alt="Screenshot of the FARSITE wildfire modelling tool interface">
+            <div class="fig-caption"><strong>Fig. 2</strong> - Screenshot of the FARSITE fire area simulator, showing its grid-based spread interface. This confirmed the cell-by-cell probabilistic approach used in my own model. [2]</div>
+        </div>
+
+        <p>I also investigated IoT-based forest monitoring platforms. Commercial systems described by Bosch [8] and DRYAD Networks [9] deploy wireless sensor meshes across real forests, measuring temperature, humidity, and CO₂ in near real time. These inspired the embedded system component: rather than simulating sensor data, I wanted a physical subject producing genuine, noisy, time-varying readings similar to what a real forest sensor might generate.</p>
+
+        <div class="fig">
+            <img src="assets/dryad_screenshot.png" alt="Screenshot of DRYAD Networks wildfire sensor monitoring platform">
+            <div class="fig-caption"><strong>Fig. 3</strong> - Screenshot of DRYAD Networks' forest sensor monitoring platform. This informed the decision to build a real physical sensor system rather than using simulated data. [11]</div>
+        </div>
+
+        <p>For datasets, I evaluated several Kaggle wildfire repositories. The <strong>Algerian Forest Fires dataset</strong> [1] stood out because it contained pre-calculated ISI and FWI values across 244 daily observations with a clean binary fire/no-fire label, making regression and sigmoid fitting straightforward without extensive preprocessing. Most alternatives were too sparse, lacked the right variables, or required significant cleaning.</p>
+
+        <div class="fig">
+            <img src="assets/kaggle_screenshot.png" alt="Screenshot of the Algerian Forest Fires dataset on Kaggle">
+            <div class="fig-caption"><strong>Fig. 4</strong> - Screenshot of the Algerian Forest Fires dataset on Kaggle, showing the ISI and FWI columns used in the open-source regression. [1]</div>
+        </div>
+
+        <p>The January 2025 Palisades Fire [4] was the real-world event that made the topic feel urgent. Reports on how the Santa Ana wind pattern drove that fire shaped the HIGH WINDS preset scenario and motivated adding long-range ember spotting, since spot fires jumping the main front were widely reported as a key driver.</p>
+
+        <p><strong>How research influenced design choices.</strong> FARSITE and FWI research confirmed that a grid-based probabilistic model driven by wind and fuel moisture is a legitimate, well-established approach, directly justifying the cellular automaton design. Bosch and DRYAD research motivated building a real embedded sensor system rather than generating synthetic data. The Algerian dataset determined that the open-source spread function would use ISI and FWI indices. The Palisades Fire reports led directly to the HIGH WINDS preset and ember-spotting mechanic. Meteorological research showing that ambient temperature follows a sinusoidal diurnal pattern led to modelling temperature variation using a sine function offset by six hours, so fire behaviour changes meaningfully across simulated time.</p>
+
+    </section>
+
+    <section id="section3">
+        <div class="section-header">
+            <span class="section-num">03</span>
+            <h3>Plan and Design</h3>
+        </div>
+
+        <p>The project was designed around two principal components developed in parallel and then integrated: the embedded system for data collection and the Python simulation model.</p>
+
+        <p><strong>Design objectives.</strong> The embedded system needed to log real sensor readings reliably over at least one week with no manual intervention. The simulation needed to be interactive enough for a non-technical user to explore the effects of changing weather conditions, while remaining grounded in real data. The feedback mechanism needed to produce actionable emergency messages reflecting how real fire agencies communicate risk, not just a number changing colour.</p>
+
+        <p><strong>Options considered.</strong> Four disaster risk scenarios were evaluated before wildfires were chosen: a drought-cycle model tracking carbon storage, a pest outbreak model using temperature-driven population spread, an air quality model driven by the atmospheric sensor, and the final wildfire choice. Wildfire was selected because it offered the richest interaction between both sensor types, the external dataset was the strongest available, and the connection to the Palisades Fire provided genuine motivation across twelve weeks.</p>
+
+        <p><strong>Stakeholders and end-user needs.</strong> Primary end users are fire department analysts and emergency planners who need to explore fire behaviour under specific forecast conditions before committing to an evacuation order. Secondary stakeholders include local government agencies using simulation outputs to inform land management policy and students using the model as a teaching tool. These groups shaped key design choices: preset scenario tabs allow repeatable, comparable runs; the step-by-step status banner guides non-experts through the workflow; and the emergency popups were written in the plain language of real public emergency communications.</p>
+
+        <p><strong>Technologies chosen.</strong> Python was mandatory under the brief. Tkinter was chosen for the GUI because it requires no additional installation and is well-suited to embedding a matplotlib canvas. Matplotlib's FuncAnimation [10] handles real-time grid updates. NumPy was used for regression fits in both analysis scripts. The BBC micro:bit [6] replaced the BMP280 after sensor failure in Week 7; MicroPython on the micro:bit handles serial temperature transmission and pyserial on the Pi reads it. The MCP3008 [7] reads the analogue soil sensor over SPI.</p>
+
+        <div class="fig">
+            <img src="assets/hardware_setup.png" alt="Photo of the Raspberry Pi, MCP3008, soil sensor, and micro:bit wired on a breadboard">
+            <div class="fig-caption"><strong>Fig. 5</strong> - Physical hardware setup: Raspberry Pi 4B, MCP3008, capacitive soil moisture sensor, and BBC micro:bit connected via breadboard and jumper wires.</div>
+        </div>
+
+        <p><strong>System architecture.</strong> The system has three layers. The embedded hardware layer: the Raspberry Pi 4B reads the capacitive soil moisture sensor via MCP3008 over SPI, and the BBC micro:bit sends temperature over USB serial. The logging script combines both into a timestamped row appended to <code>plant_data.csv</code> once per hour. The data analysis layer feeds that CSV into <code>analysis_closed.py</code>, which performs a linear regression of moisture against temperature, extracting slope, intercept, mean, and standard deviation for the closed-source spread function. Separately, <code>analysis_open.py</code> fits a regression and sigmoid to the Algerian dataset. The simulation layer, <code>main.py</code>, imports all six constants at startup and runs a Tkinter GUI on a Matplotlib FuncAnimation loop.</p>
+
+        <div class="flowchart">
+
+            <div class="fc-legend">
+                <div class="fc-legend-item"><div class="fc-legend-dot hw"></div> Hardware</div>
+                <div class="fc-legend-item"><div class="fc-legend-dot data"></div> Data / Storage</div>
+                <div class="fc-legend-item"><div class="fc-legend-dot sw"></div> Software</div>
+                <div class="fc-legend-item"><div class="fc-legend-dot output"></div> Output</div>
+            </div>
+
+            <div class="fc-divider-label">Embedded System</div>
+
+            <div class="fc-row">
+                <div class="fc-col">
+                    <div class="fc-box hw">Capacitive Soil Sensor V2.0.0</div>
+                    <div class="fc-arrow-v"></div>
+                    <div class="fc-box hw">MCP3008 I/P</div>
+                    <div class="fc-arrow-v"></div>
+                </div>
+                <div style="width:60px"></div>
+                <div class="fc-col">
+                    <div class="fc-box hw">BBC micro:bit V2</div>
+                    <div class="fc-note">onboard temperature sensor</div>
+                    <div class="fc-arrow-v"></div>
+                    <div class="fc-box sw">microbit.py</div>
+                    <div class="fc-note">deployed as microbit.hex</div>
+                    <div class="fc-arrow-v"></div>
+                    <div class="fc-box hw">USB Serial / pyserial</div>
+                    <div class="fc-arrow-v"></div>
+                </div>
+            </div>
+
+            <div class="fc-row" style="justify-content:center;">
+                <div style="width:120px; border-bottom:1px solid var(--color-border-default); border-left:1px solid var(--color-border-default); height:12px; margin-right:-1px;"></div>
+                <div style="width:120px; border-bottom:1px solid var(--color-border-default); border-right:1px solid var(--color-border-default); height:12px; margin-left:-1px;"></div>
+            </div>
+            <div class="fc-arrow-v"></div>
+
+            <div class="fc-box sw fc-box-lg">raspberry_pi.py</div>
+            <div class="fc-note">Raspberry Pi 4B &mdash; reads MCP3008 over SPI and micro:bit over USB serial</div>
+            <div class="fc-arrow-v fc-arrow-v-lg"></div>
+
+            <div class="fc-box data">plant_data.csv &nbsp;/&nbsp; microSD card &nbsp;/&nbsp; one row per hour</div>
+
+            <div class="fc-divider"></div>
+            <div class="fc-divider-label">Data Analysis</div>
+
+            <div class="fc-row" style="gap:24px; align-items:flex-start;">
+                <div class="fc-col">
+                    <div class="fc-box data fc-box-sm">plant_data.csv</div>
+                    <div class="fc-arrow-v"></div>
+                    <div class="fc-box sw">closed_source_calculation.py</div>
+                    <div class="fc-note">Linear regression<br>Moisture = f(Temp)<br><span class="math">R^2 = 0.177</span></div>
+                    <div class="fc-arrow-v"></div>
+                    <div class="fc-box data fc-box-sm">plant_analysis.png</div>
+                    <div class="fc-arrow-v"></div>
+                    <div class="fc-box sw fc-box-sm">slope, intercept,<br>mean_T, std_T</div>
+                </div>
+                <div style="border-left:1px dashed var(--color-border-default); height:220px; align-self:center;"></div>
+                <div class="fc-col">
+                    <div class="fc-box data fc-box-sm">Algerian_forest_fires_dataset.csv</div>
+                    <div class="fc-arrow-v"></div>
+                    <div class="fc-box sw">open_source_calculation.py</div>
+                    <div class="fc-note">FWI regression<br><span class="math">FWI = 1.653*ISI - 0.804</span><br><span class="math">R^2 = 0.852</span> / sigmoid fit</div>
+                    <div class="fc-arrow-v"></div>
+                    <div class="fc-box data fc-box-sm">algerian_analysis.png</div>
+                    <div class="fc-arrow-v"></div>
+                    <div class="fc-box sw fc-box-sm">sig_centre, sig_scale,<br>reg slope, intercept</div>
+                </div>
+            </div>
+
+            <div class="fc-row" style="justify-content:center;">
+                <div style="width:100px; border-bottom:1px solid var(--color-border-default); border-left:1px solid var(--color-border-default); height:12px; margin-right:-1px;"></div>
+                <div style="width:100px; border-bottom:1px solid var(--color-border-default); border-right:1px solid var(--color-border-default); height:12px; margin-left:-1px;"></div>
+            </div>
+            <div class="fc-arrow-v"></div>
+
+            <div class="fc-divider-label">Simulation Software</div>
+
+            <div class="fc-box sw fc-box-lg">main.py</div>
+            <div class="fc-note">Tkinter GUI / Matplotlib / agent-based grid<br>spread functions / wind model / diurnal cycle / tabbed scenarios</div>
+            <div class="fc-arrow-v fc-arrow-v-lg"></div>
+
+            <div class="fc-row" style="gap:10px; flex-wrap:wrap; justify-content:center;">
+                <div class="fc-box output">Interactive Simulation</div>
+                <div class="fc-box output">Risk Alerts (Warning / Critical)</div>
+                <div class="fc-box output">DROUGHT &amp; HIGH WINDS Presets</div>
+            </div>
+
+        </div>
+    </section>
+
+    <section id="section4">
+        <div class="section-header">
+            <span class="section-num">04</span>
+            <h3>Create</h3>
+        </div>
+
+        <p><strong>Development milestones.</strong> Development followed an iterative cycle across fourteen weeks. The major milestones in order were:</p>
+
+        <div class="timeline">
+            <div class="tl-item">
+                <div class="tl-body"><strong>Core ABM simulation loop</strong> - <em>Week 4</em><br>Built the initial Agent-Based Model (covered in 5th year): four cell states (EMPTY, TREE, BURNING, BURNED), a sigmoid spread formula driven by temperature and moisture, a colourmap grid visualisation, and a Tkinter window with step-by-step FuncAnimation.</div>
+            </div>
+            <div class="tl-item">
+                <div class="tl-body"><strong>Interactive controls, feedback, diurnal cycle, and wind</strong> - <em>Week 4 (continued)</em><br>Sliders for temperature, moisture, and density; <span class="ui-btn ui-btn-blue">INITIALISE</span> / <span class="ui-btn ui-btn-blue">RANDOM IGNITION</span> / click-to-ignite; risk label (<span class="ui-risk ui-risk-warning">WARNING</span> at 10%, <span class="ui-risk ui-risk-critical">CRITICAL</span> at 40%) with emergency alert popups; live analytics panel, status banner, and playback controls. Sine-wave diurnal cycle (peak 12:00, trough 00:00, half-hour steps). Wind speed slider and compass widget; dot-product directional spread; ember spotting above 5 km/h; drifting particles above 7 km/h.</div>
+            </div>
+            <div class="tl-item">
+                <div class="tl-body"><strong>Tabbed what-if scenarios and bug fixes</strong> - <em>Week 5</em><br>Three-tab notebook: <span class="ui-tab ui-tab-active">CUSTOM</span>, <span class="ui-tab ui-tab-active">ONE</span> (drought, closed-source), <span class="ui-tab ui-tab-active">TWO</span> (Santa Ana winds, open-source). Fixed: wrong mode strings; presets not loading wind/spread function; toggle_pause() destroying animation object; imshow clipping half a cell off every edge; on_click igniting non-tree cells (Test 16).</div>
+            </div>
+            <div class="tl-item">
+                <div class="tl-body"><strong>Embedded system and data collection</strong> - <em>Weeks 6-7</em><br>Pi set up over SSH; BMP280 connected over I2C alongside the soil sensor, calibrated by recording raw values in open air (<span class="math">VAL_DRY = 54 000</span>) and submerged in water (<span class="math">VAL_WET = 27 500</span>). The BMP280 failed after several hours in Week 7; diagnosed by checking solder joints and re-running I2C scans before replacing it with a BBC micro:bit. The logging script was rewritten from scratch: MicroPython on the micro:bit transmits temperature every five seconds over USB serial; the Pi reads it via pyserial at /dev/ttyACM0 with a <span class="math">-2 °C</span> offset to correct for the micro:bit's tendency to read high. To test BR3, a radiator was run from 9am-5pm on the 7th (producing a sustained Temp_C rise and fall) and the plant was watered on the 9th (producing a sharp Moisture_Percent spike). Final dataset: 134 hourly readings.</div>
+            </div>
+            <div class="tl-item">
+                <div class="tl-body"><strong>Data analysis and function integration</strong> - <em>Weeks 8-9</em><br>Algerian dataset cleaned by skipping rows where the first field couldn't be parsed as an integer. Linear regression gave <span class="math">FWI = 1.653 * ISI - 0.804</span> (<span class="math">R^2 = 0.852</span>); sigmoid centre 6.35 derived as the midpoint between mean FWI of fire and no-fire days, scale 3.71 as half the overall FWI standard deviation. Plant data regression: <span class="math">Moisture = -0.2795 * Temp + 21.37</span> (<span class="math">R^2 = 0.177</span>, <span class="math">p &lt; 0.001</span>) - the modest R² was expected given the narrow 8-11 °C indoor range; the significant p-value confirmed the negative trend was genuine. Both replaced hard-coded constants in main.py; preset tabs renamed DROUGHT and HIGH WINDS.</div>
+            </div>
+            <div class="tl-item">
+                <div class="tl-body"><strong>Final testing and submission</strong> - <em>Weeks 10-14</em><br>Re-ran all 18 tests against the final build (Test 19: all passed). Inline comments added throughout. Report webpage built in HTML/CSS; submission video recorded in OBS and edited to exactly 5 minutes in Kdenlive.</div>
+            </div>
+        </div>
+
+        <div class="fig">
+            <img src="assets/simulation_screenshot.png" alt="Screenshot of the simulation">
+            <div class="fig-caption"><strong>Fig. 6</strong> - Screenshot of the wildfire simulation GUI, showing the grid colourmap, left control panel with sliders and analytics, and the risk label</div>
+        </div>
+
+        <p><strong>Testing.</strong> Nineteen tests were written and executed incrementally throughout development - each added immediately after the feature it covers, so failures were caught close to the point of introduction rather than discovered late. All 19 passed in the final retest (Test 19).</p>
+
+        <table class="test-table">
+            <thead>
+                <tr><th>#</th><th>Description</th><th>Input</th><th>Expected Outcome</th><th>Actual Outcome</th><th>Pass / Fail</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>1</td><td>Create model; check grid dimensions</td><td>width=60, height=40</td><td>40 rows * 60 cols</td><td>40 rows * 60 cols</td><td class="pass">PASS</td></tr>
+                <tr><td>2</td><td>Initialise; verify no TREE cells placed</td><td>tree_density=0.0</td><td>No TREE cells present</td><td>No TREE cells present</td><td class="pass">PASS</td></tr>
+                <tr><td>3</td><td>Initialise; verify every cell is a tree</td><td>tree_density=1.0</td><td>Every cell equals TREE</td><td>Every cell equals TREE</td><td class="pass">PASS</td></tr>
+                <tr><td>4</td><td>Check initial_tree_count matches actual TREE count after initialisation</td><td>tree_density=0.6 (default)</td><td>initial_tree_count == TREE count</td><td>initial_tree_count == TREE count</td><td class="pass">PASS</td></tr>
+                <tr><td>5</td><td>Set a specific cell to BURNING manually; verify state</td><td>grid[5][5] = BURNING</td><td>Cell state equals BURNING</td><td>Cell state equals BURNING</td><td class="pass">PASS</td></tr>
+                <tr><td>6</td><td>Single BURNING cell in empty grid; run 10 steps; check no spread</td><td>tree_density=0.0, one BURNING cell</td><td>No additional BURNING/BURNED cells</td><td>No additional cells changed state</td><td class="pass">PASS</td></tr>
+                <tr><td>7</td><td>Run full simulation; verify no BURNED cell transitions back to BURNING</td><td>Normal run to completion</td><td>BURNED cells remain BURNED throughout</td><td>BURNED cells remained BURNED throughout</td><td class="pass">PASS</td></tr>
+                <tr><td>8</td><td>Call get_p_base(); verify returned probability is in range</td><td>temp=10, moisture=0.5</td><td><span class="math">0.0 &lt;= p &lt;= 1.0</span></td><td><span class="math">0.0 &lt;= p &lt;= 1.0</span></td><td class="pass">PASS</td></tr>
+                <tr><td>9</td><td>Call get_p_base() at high vs low temperature; check higher temp gives higher probability</td><td>temp=30 vs temp=5, moisture=0.5</td><td><span class="math">p(30) &gt; p(5)</span></td><td><span class="math">p(30) &gt; p(5)</span></td><td class="pass">PASS</td></tr>
+                <tr><td>10</td><td>Call get_p_base() at low vs high moisture; check drier conditions give higher probability</td><td>moisture=0.05 vs moisture=0.95, temp=10</td><td><span class="math">p(0.05) &gt; p(0.95)</span></td><td><span class="math">p(0.05) &gt; p(0.95)</span></td><td class="pass">PASS</td></tr>
+                <tr><td>11</td><td>Check diurnal temperature function peaks at 12:00 <em>(initial assumption was 18:00)</em></td><td>time_of_day stepped 0-23.5</td><td>Peak at time_of_day=18</td><td>Peak at time_of_day=12, not 18</td><td class="fail">FAIL</td></tr>
+                <tr><td>12</td><td>Check diurnal temperature function troughs at 00:00 <em>(initial assumption was 06:00)</em></td><td>time_of_day stepped 0-23.5</td><td>Trough at time_of_day=6</td><td>Trough at time_of_day=0, not 6</td><td class="fail">FAIL</td></tr>
+                <tr><td>13</td><td>Run three steps; check history lists have correct length</td><td>3 calls to step()</td><td>len(history) == 3</td><td>Lists shorter - step() only appended when BURNING cells existed</td><td class="fail">FAIL</td></tr>
+                <tr><td>14</td><td>Check time_of_day advances correctly per step</td><td>1 call to step()</td><td>time_of_day increases by 0.5</td><td>time_of_day increased by 0.5</td><td class="pass">PASS</td></tr>
+                <tr><td>15</td><td>Set time_of_day to 23.5, run one step; check day_count increments and time_of_day resets</td><td>time_of_day=23.5, 1 call to step()</td><td>day_count += 1, time_of_day == 0.0</td><td>day_count += 1, time_of_day == 0.0</td><td class="pass">PASS</td></tr>
+                <tr><td>16</td><td>Click on non-tree cell; check it does not become BURNING</td><td>Click on EMPTY cell</td><td>Cell remains EMPTY</td><td>Cell was set to BURNING regardless of state (bug present since Week 4)</td><td class="fail">FAIL</td></tr>
+                <tr><td>17</td><td>Verify logging script appends rows correctly to plant_data.csv</td><td>Script running for several cycles</td><td>Rows with Date, Time, Temp_C, Raw_Soil, Moisture_Percent</td><td>Rows appended correctly with all expected columns</td><td class="pass">PASS</td></tr>
+                <tr><td>18</td><td>Water the plant; check Moisture_Percent increases in next logged row</td><td>Physical watering of plant</td><td>Moisture_Percent rises noticeably after watering</td><td>Moisture_Percent spiked sharply in the following reading</td><td class="pass">PASS</td></tr>
+                <tr><td>19</td><td>Re-run all previous tests against the final submitted version of main.py</td><td>Final main.py</td><td>All 18 tests pass</td><td>All 18 tests passed</td><td class="pass">PASS</td></tr>
+            </tbody>
+        </table>
+
+        <div class="test-fixes">
+            <h4>How Failed Tests Were Fixed</h4>
+            <div class="fix-item">
+                <div class="fix-labels">
+                    <span class="fix-num">Test 11</span>
+                    <span class="fix-num">Test 12</span>
+                </div>
+                <p>Wrong test expectations: <span class="math">sin(2π(t-6)/24)</span> peaks at t = 12, not t = 18; troughs at t = 0, not t = 6. Code was correct; test expectations were corrected.</p>
+            </div>
+            <div class="fix-item">
+                <span class="fix-num">Test 13</span>
+                <p><code>step()</code> only appended to history when BURNING cells existed. Fix: moved append calls outside the burning-cell conditional.</p>
+            </div>
+            <div class="fix-item">
+                <span class="fix-num">Test 16</span>
+                <p><code>on_click</code> had no cell-state check, igniting EMPTY and BURNED cells. Fix: added a TREE state check; updated bounds check to use actual model dimensions.</p>
+            </div>
+        </div>
+
+        <p><strong>The model.</strong> In 5th Year, ALT3 introduced agent-based modelling through a SIR (Susceptible / Infectious / Recovered) model in Python - the teacher provided the base framework and I wrote the core simulation logic in <code>def sim</code>. This project applies the same ABM principle at a larger scale: at each step, every BURNING cell evaluates all eight neighbours (diagonal spread produces realistic irregular shapes; four neighbours would produce an unrealistic diamond). The <strong>closed-source spread function</strong> blends a regression-predicted moisture value 50/50 with the slider, applies a nonlinear dryness term <span class="math">(1 - moisture)^2</span>, and weights it with a temperature sigmoid centred on the sensor mean of 9.92 °C. Final <span class="math">p_spread = temp_effect * dryness * 0.30</span>.</p>
+
+        <div class="fig">
+            <img src="assets/plant_analysis.png" alt="Graphs from analysis_closed.py: scatter plot of Temp_C vs Moisture_Percent with regression line">
+            <div class="fig-caption"><strong>Fig. 7</strong> - Output of <code>closed_source_calculation.py</code>: scatter plot of <code>Temp_C</code> vs <code>Moisture_Percent</code> from <code>plant_data.csv</code> with fitted regression line.</div>
+        </div>
+
+        <div class="code-block-wrap">
+            <div class="code-block-header">
+                <div class="code-block-filename">main.py</div>
+                <div class="code-block-lang">Python</div>
+            </div>
+            <div class="code-block"><span class="ck-kw">def</span> <span class="ck-fn">spread_close_source</span>(<span class="ck-self">self</span>):
+    <span class="ck-var">SLOPE</span>     <span class="ck-op">=</span> <span class="ck-num">-0.2795</span>
+    <span class="ck-var">INTERCEPT</span> <span class="ck-op">=</span> <span class="ck-num">21.3733</span>
+    <span class="ck-var">MEAN_T</span>    <span class="ck-op">=</span> <span class="ck-num">9.92</span>
+    <span class="ck-var">STD_T</span>     <span class="ck-op">=</span> <span class="ck-num">2.05</span>
+
+    <span class="ck-var">current_temp</span> <span class="ck-op">=</span> <span class="ck-self">self</span>.<span class="ck-fn">diurnal_temp</span>()
+
+    <span class="ck-var">predicted_moisture</span> <span class="ck-op">=</span> <span class="ck-mod">np</span>.<span class="ck-fn">clip</span>((<span class="ck-var">SLOPE</span> <span class="ck-op">*</span> <span class="ck-var">current_temp</span> <span class="ck-op">+</span> <span class="ck-var">INTERCEPT</span>) <span class="ck-op">/</span> <span class="ck-num">100.0</span>, <span class="ck-num">0.0</span>, <span class="ck-num">1.0</span>)
+    <span class="ck-var">effective_moisture</span> <span class="ck-op">=</span> <span class="ck-num">0.5</span> <span class="ck-op">*</span> <span class="ck-var">predicted_moisture</span> <span class="ck-op">+</span> <span class="ck-num">0.5</span> <span class="ck-op">*</span> <span class="ck-self">self</span>.<span class="ck-var">soil_moisture</span>
+
+    <span class="ck-var">dryness_effect</span> <span class="ck-op">=</span> (<span class="ck-num">1.0</span> <span class="ck-op">-</span> <span class="ck-var">effective_moisture</span>) <span class="ck-op">**</span> <span class="ck-num">2</span>
+    <span class="ck-var">temp_effect</span>    <span class="ck-op">=</span> <span class="ck-num">1.0</span> <span class="ck-op">/</span> (<span class="ck-num">1.0</span> <span class="ck-op">+</span> <span class="ck-mod">np</span>.<span class="ck-fn">exp</span>(<span class="ck-op">-</span>(<span class="ck-var">current_temp</span> <span class="ck-op">-</span> <span class="ck-var">MEAN_T</span>) <span class="ck-op">/</span> <span class="ck-var">STD_T</span>))
+
+    <span class="ck-kw">return</span> <span class="ck-num">0.30</span> <span class="ck-op">*</span> <span class="ck-var">temp_effect</span> <span class="ck-op">*</span> <span class="ck-var">dryness_effect</span></div>
+        </div>
+
+        <p>The <strong>open-source function</strong> computes ISI from wind speed and fuel-moisture proxy, converts it to FWI via the Algerian regression (<span class="math">FWI = 1.653 * ISI - 0.804</span>, <span class="math">R^2 = 0.852</span>), then passes that through a sigmoid (centre 6.35, scale 3.71) with ±20% stochastic noise to reflect natural variability. The <strong>wind model</strong> uses dot-product alignment between spread direction and wind vector; above 5 km/h, long-range ember spotting ignites trees 3-9 cells ahead; above 7 km/h, drifting ember particles persist across multiple steps as animated star markers.</p>
+
+        <div class="fig">
+            <img src="assets/algerian_analysis.png" alt="Graphs from analysis_open.py: ISI vs FWI scatter coloured by fire/no-fire days and sigmoid curve">
+            <div class="fig-caption"><strong>Fig. 8</strong> - Output of <code>open_source_calculations.py</code>: ISI vs FWI scatter plot coloured by fire and no-fire days from the Algerian dataset with fitted regression line, and the sigmoid curve mapping FWI to spread probability.</div>
+        </div>
+
+        <div class="code-block-wrap">
+            <div class="code-block-header">
+                <div class="code-block-filename">main.py</div>
+                <div class="code-block-lang">Python</div>
+            </div>
+            <div class="code-block"><span class="ck-kw">def</span> <span class="ck-fn">spread_open_source</span>(<span class="ck-self">self</span>):
+    <span class="ck-var">SLOPE</span>      <span class="ck-op">=</span> <span class="ck-num">1.6530</span>
+    <span class="ck-var">INTERCEPT</span>  <span class="ck-op">=</span> <span class="ck-num">-0.8037</span>
+    <span class="ck-var">SIG_CENTRE</span> <span class="ck-op">=</span> <span class="ck-num">6.35</span>
+    <span class="ck-var">SIG_SCALE</span>  <span class="ck-op">=</span> <span class="ck-num">3.71</span>
+
+    <span class="ck-var">current_temp</span> <span class="ck-op">=</span> <span class="ck-self">self</span>.<span class="ck-fn">diurnal_temp</span>()
+    <span class="ck-var">fuel_dryness</span> <span class="ck-op">=</span> <span class="ck-mod">np</span>.<span class="ck-fn">clip</span>((<span class="ck-num">1.0</span> <span class="ck-op">-</span> <span class="ck-self">self</span>.<span class="ck-var">soil_moisture</span>) <span class="ck-op">*</span> <span class="ck-num">95</span> <span class="ck-op">+</span> (<span class="ck-var">current_temp</span> <span class="ck-op">*</span> <span class="ck-num">0.3</span>), <span class="ck-num">0</span>, <span class="ck-num">101</span>)
+
+    <span class="ck-var">f_wind</span> <span class="ck-op">=</span> <span class="ck-mod">np</span>.<span class="ck-fn">exp</span>(<span class="ck-num">0.05039</span> <span class="ck-op">*</span> <span class="ck-self">self</span>.<span class="ck-var">wind_speed</span>)
+    <span class="ck-var">f_fuel</span> <span class="ck-op">=</span> <span class="ck-num">0.9110</span> <span class="ck-op">*</span> <span class="ck-mod">np</span>.<span class="ck-fn">exp</span>(<span class="ck-num">0.0337</span> <span class="ck-op">*</span> <span class="ck-var">fuel_dryness</span>) <span class="ck-op">*</span> <span class="ck-num">0.1</span>
+    <span class="ck-var">isi_value</span> <span class="ck-op">=</span> <span class="ck-var">f_wind</span> <span class="ck-op">*</span> <span class="ck-var">f_fuel</span>
+
+    <span class="ck-var">fwi_score</span> <span class="ck-op">=</span> <span class="ck-var">SLOPE</span> <span class="ck-op">*</span> <span class="ck-var">isi_value</span> <span class="ck-op">+</span> <span class="ck-var">INTERCEPT</span>
+
+    <span class="ck-var">noise</span> <span class="ck-op">=</span> <span class="ck-self">self</span>.<span class="ck-var">rng</span>.<span class="ck-fn">uniform</span>(<span class="ck-num">0.8</span>, <span class="ck-num">1.2</span>)
+    <span class="ck-kw">return</span> <span class="ck-fn">float</span>(<span class="ck-mod">np</span>.<span class="ck-fn">clip</span>((<span class="ck-num">1</span> <span class="ck-op">/</span> (<span class="ck-num">1</span> <span class="ck-op">+</span> <span class="ck-mod">np</span>.<span class="ck-fn">exp</span>(<span class="ck-op">-</span>(<span class="ck-var">fwi_score</span> <span class="ck-op">-</span> <span class="ck-var">SIG_CENTRE</span>) <span class="ck-op">/</span> <span class="ck-var">SIG_SCALE</span>))) <span class="ck-op">*</span> <span class="ck-var">noise</span>, <span class="ck-num">0.01</span>, <span class="ck-num">0.9</span>))</div>
+        </div>
+
+        <div class="fig">
+            <img src="assets/scenario_comparison.png" alt="Side-by-side grid screenshots of DROUGHT and HIGH WINDS preset outcomes">
+            <div class="fig-caption"><strong>Fig. 9</strong> - End-state grid comparison: <strong>DROUGHT</strong> preset (left, closed-source spread - high temp, low moisture, light wind) vs <strong>HIGH WINDS</strong> preset (right, open-source spread - Santa Ana conditions). The HIGH WINDS run shows a strongly elongated downwind burn shape and spot fires ahead of the main front.</div>
+        </div>
+
+    </section>
+
+    <section id="section5">
+        <div class="section-header">
+            <span class="section-num">05</span>
+            <h3>Evaluation</h3>
+        </div>
+
+        <p>The final artefact successfully meets all three basic and all three advanced requirements of the brief. <strong>BR1</strong> is met by the Raspberry Pi 4B embedded system using a capacitive soil moisture sensor via MCP3008 and a BBC micro:bit temperature sensor over USB serial, logging readings hourly to <code>plant_data.csv</code>. <strong>BR2</strong> is met by approximately 134 continuous hourly readings of temperature, raw soil value, and moisture percentage collected over five days. <strong>BR3</strong> is met by two changing inputs: watering the plant produced a sharp spike in <code>Moisture_Percent</code>, and running a radiator produced a sustained rise and fall in <code>Temp_C</code> across an eight-hour window. <strong>AR1</strong> is met by the agent-based cellular automaton in <code>main.py</code>, using two data-driven spread functions derived from the plant sensor and Algerian Forest Fires regressions respectively. <strong>AR2</strong> is met by the <span class="ui-tab ui-tab-active">DROUGHT</span> and <span class="ui-tab ui-tab-active">HIGH WINDS</span> preset scenario tabs, which lock all parameters to specific what-if conditions and produce visibly different burn patterns. <strong>AR3</strong> is met by the adaptive risk label and emergency popup system, which fires <span class="ui-risk ui-risk-warning">WARNING</span> and <span class="ui-risk ui-risk-critical">CRITICAL</span> alerts at 10% and 40% tree loss thresholds respectively.</p>
+
+        <p>The two spread functions are grounded in real data, which is a substantive improvement over the hard-coded constants used in earlier iterations. The closed-source regression (<span class="math">R^2 = 0.177</span>) is modest but reasonable given the narrow indoor temperature range (mostly 8-11 °C); the p-value below 0.001 confirms the negative trend is statistically genuine. The open-source regression (<span class="math">R^2 = 0.852</span>) is strong, making the FWI-based function the more reliable of the two.</p>
+
+        <p>The main limitation is that the grid uses a simplified, uniform-density representation. Real wildfires spread differently across varying terrain, fuel types, and road networks. A meaningful iteration would replace the uniform grid with a real land-cover raster - for example, Corine Land Cover data for Ireland - giving the model genuine site-specific utility for Irish wildland-urban interface planning. A second improvement would deploy the sensor system outdoors, increasing the temperature range and producing a closed-source regression with higher predictive power.</p>
+
+    </section>
+
+    <section id="section6">
+        <div class="section-header">
+            <span class="section-num">06</span>
+            <h3>References</h3>
+        </div>
+
+        <ul class="ref-list">
+            <li><a href="https://www.kaggle.com/datasets/nitinchoudhary012/algerian-forest-fires-dataset" target="_blank">https://www.kaggle.com/datasets/nitinchoudhary012/algerian-forest-fires-dataset</a></li>
+            <li><a href="https://medium.com/the-modern-scientist/exploring-farsite-a-pioneering-tool-in-wildfire-simulation-2b250c5d961b" target="_blank">https://medium.com/the-modern-scientist/exploring-farsite-a-pioneering-tool-in-wildfire-simulation-2b250c5d961b</a></li>
+            <li><a href="https://cwfis.cfs.nrcan.gc.ca/background/summary/fwi" target="_blank">https://cwfis.cfs.nrcan.gc.ca/background/summary/fwi</a></li>
+            <li><a href="https://www.latimes.com/california/story/2025-01-08/palisades-fire-explainer" target="_blank">https://www.latimes.com/california/story/2025-01-08/palisades-fire-explainer</a></li>
+            <li><a href="https://www.raspberrypi.com/documentation/" target="_blank">https://www.raspberrypi.com/documentation/</a></li>
+            <li><a href="https://microbit-micropython.readthedocs.io" target="_blank">https://microbit-micropython.readthedocs.io</a></li>
+            <li><a href="https://www.microchip.com/en-us/product/mcp3008" target="_blank">https://www.microchip.com/en-us/product/mcp3008</a></li>
+            <li><a href="https://www.bosch.com/stories/early-forest-fire-detection-sensors/" target="_blank">https://www.bosch.com/stories/early-forest-fire-detection-sensors/</a></li>
+            <li><a href="https://www.dryad.net/post/different-uses-of-wireless-sensors-for-wildfire-monitoring" target="_blank">https://www.dryad.net/post/different-uses-of-wireless-sensors-for-wildfire-monitoring</a></li>
+            <li><a href="https://matplotlib.org/stable/api/animation_api.html" target="_blank">https://matplotlib.org/stable/api/animation_api.html</a></li>
+            <li><a href="https://www.dryad.net/cloudplatform" target="_blank">https://www.dryad.net/cloudplatform</a></li>
+        </ul>
+    </section>
+
+    <section id="section7">
+        <div class="section-header">
+            <span class="section-num">07</span>
+            <h3>Summary Word Count</h3>
+        </div>
+
+        <table class="wc-table">
+            <thead>
+                <tr><th>Section</th><th>Word Count</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>1. Meeting the Brief</td><td>254</td></tr>
+                <tr><td>2. Investigation</td><td>350</td></tr>
+                <tr><td>3. Plan and Design</td><td>445</td></tr>
+                <tr><td>4. Create</td><td>1029</td></tr>
+                <tr><td>5. Evaluation</td><td>382</td></tr>
+                <tr class="total"><td>Total</td><td>2460</td></tr>
+            </tbody>
+        </table>
+
+        <p class="wc-note">Word count excludes code snippets, table content (e.g.: Tests), reference URLs, and navigation elements.</p>
+    </section>
+
+</div>
+
+<script>
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.sidebar a.bar-item');
+
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                navLinks.forEach(link => {
+                    link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id);
+                });
+            }
+        });
+    }, { rootMargin: '-20% 0px -65% 0px' });
+
+    sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
