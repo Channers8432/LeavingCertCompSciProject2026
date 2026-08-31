@@ -1,6 +1,6 @@
 My submission for the 2026 Leaving Certificate Computer Science coursework.
 
-The project focuses on forest disasters, with a particular emphasis on wildfires.
+The project focuses on predicting wildfire behaviour given a set of user-set conditions.
 
 It follows the structure required for 2026, with a few minor differences:
 * The project brief is included
@@ -9,4 +9,4 @@ It follows the structure required for 2026, with a few minor differences:
   * `index_raw.html`: the original version
   * `index_vid.html`: a version with the Dropbox video embedded
 
-This project received a grade of / (%).
+This project received a grade of 87/90 (~97%).
